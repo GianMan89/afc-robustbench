@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: "Perturbation-Based Robustness Benchmarking for Online Alarm Flood Classification"
+message: "If you use this repository, cite the accompanying journal manuscript."
+type: software
+authors:
+  - family-names: Manca
+    given-names: Gianluca
+  - family-names: Najafi
+    given-names: Amirhossein
+  - family-names: Tamascelli
+    given-names: Nicola
+  - family-names: Kunze
+    given-names: Franz C.
+  - family-names: Dix
+    given-names: Marcel
+  - family-names: Hollender
+    given-names: Martin
+  - family-names: Fay
+    given-names: Alexander
+  - family-names: Chen
+    given-names: Tongwen
+version: 0.1.0
+date-released: 2026-05-04

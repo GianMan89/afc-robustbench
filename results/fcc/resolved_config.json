@@ -1,0 +1,174 @@
+{
+  "random_seed": 42,
+  "output_dir": "results/fcc",
+  "verbose": true,
+  "parallel": {
+    "n_jobs": 8,
+    "backend": "loky",
+    "inner_max_num_threads": 1,
+    "pre_dispatch": "2*n_jobs"
+  },
+  "dataset": {
+    "name": "fcc",
+    "path": "data/fcc",
+    "dt": 1.0,
+    "max_length": 60,
+    "binary_threshold": 0.5
+  },
+  "cv": {
+    "n_splits": 5,
+    "n_repeats": 1,
+    "validation_fraction": 0.0
+  },
+  "benchmark": {
+    "severity_grid": [
+      0.0,
+      0.05,
+      0.1,
+      0.15,
+      0.2,
+      0.25,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8,
+      0.9
+    ],
+    "n_draws": 10,
+    "progress_grid": [
+      0.1666667,
+      0.3333333,
+      0.5,
+      0.6666667,
+      0.8333333,
+      1.0
+    ],
+    "update_start": 10.0,
+    "update_interval": 10.0,
+    "progress_reference": "relative_time",
+    "include_zero_update": false,
+    "initial_active_policy": "act",
+    "allow_leading_rtn": true
+  },
+  "perturbations": [
+    {
+      "name": "missing_events",
+      "type": "missing_events"
+    },
+    {
+      "name": "spurious_events",
+      "type": "spurious_events"
+    },
+    {
+      "name": "timing_uncertainty",
+      "type": "timing_uncertainty",
+      "max_shift": 10.0
+    },
+    {
+      "name": "late_time_delay",
+      "type": "late_time_delay"
+    },
+    {
+      "name": "mixed_missing_spurious",
+      "type": "mixed",
+      "stages": [
+        {
+          "type": "missing_events"
+        },
+        {
+          "type": "spurious_events"
+        }
+      ]
+    },
+    {
+      "name": "mixed_spurious_timing_late",
+      "type": "mixed",
+      "stages": [
+        {
+          "type": "spurious_events"
+        },
+        {
+          "type": "timing_uncertainty",
+          "max_shift": 10.0
+        },
+        {
+          "type": "late_time_delay"
+        }
+      ]
+    }
+  ],
+  "models": [
+    {
+      "name": "wdi_1nn",
+      "params_grid": [
+        {
+          "template_threshold": 0.5
+        }
+      ]
+    },
+    {
+      "name": "jac_1nn",
+      "params_grid": [
+        {}
+      ]
+    },
+    {
+      "name": "eac_1nn",
+      "params_grid": [
+        {
+          "attenuation": 0.01,
+          "time_scale": "event_index",
+          "distance": "euclidean"
+        }
+      ]
+    },
+    {
+      "name": "mbw_lr",
+      "params_grid": [
+        {
+          "C": 1.0,
+          "penalty": "l2",
+          "solver": "lbfgs",
+          "fit_intercept": true
+        }
+      ]
+    },
+    {
+      "name": "acm_svm",
+      "params_grid": [
+        {
+          "C": 1.0,
+          "kernel": "rbf",
+          "gamma": "scale"
+        }
+      ]
+    },
+    {
+      "name": "casim",
+      "params_grid": [
+        {
+          "num_features": 672,
+          "n_estimators": 1,
+          "backend": "auto",
+          "random_state": 42,
+          "training_mode": "prefix",
+          "prefix_grid": [
+            0.1666667,
+            0.3333333,
+            0.5,
+            0.6666667,
+            0.8333333,
+            1.0
+          ],
+          "prefix_reference": "relative_time",
+          "prefix_train_reference": "relative_time",
+          "prefix_selection": "left",
+          "prefix_train_horizon": "prefix",
+          "prefix_min_time_steps": 9
+        }
+      ]
+    }
+  ]
+}

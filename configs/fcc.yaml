@@ -1,0 +1,97 @@
+random_seed: 42  # Global seed for reproducible CV splits, perturbation draws, and model randomness where supported.
+output_dir: results/fcc  # Output folder for raw predictions, selected hyperparameters, aggregated scores, and plots.
+verbose: true  # Enables compact logging of the benchmarking process; set false for cleaner output.
+
+parallel:
+  n_jobs: 8  # Number of CPU workers; -1 uses all available cores, 1 disables parallel execution.
+  backend: loky  # Process-based joblib backend; alternatives: threading, multiprocessing.
+  inner_max_num_threads: 1  # Limits BLAS/OpenMP threads per worker to avoid CPU oversubscription.
+  pre_dispatch: 2*n_jobs  # Number of queued tasks; lower values reduce memory pressure.
+
+dataset:
+  name: fcc  # Dataset identifier written to result tables.
+  path: data/fcc  # Dataset root folder; expected structure: data/fcc/class_01/*.csv, class_02/*.csv, ...
+  dt: 1.0  # Sampling interval of the alarm series; here 1.0 corresponds to one minute.
+  max_length: 60  # Maximum number of time steps; null keeps full episodes and pads to the longest episode.
+  binary_threshold: 0.5  # Values > 0.5 are treated as active alarms.
+
+cv:
+  n_splits: 5  # Number of stratified outer folds; 5 gives 80% training and 20% test per fold.
+  n_repeats: 1  # Number of repeated CV cycles; increase to 10 for 50 outer test runs.
+  validation_fraction: 0.0  # 0.0 disables validation/hyperparameter search and uses the first params_grid entry.
+
+benchmark:
+  severity_grid: [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]  # Perturbation severities; denser at low severity.
+  n_draws: 10  # Monte-Carlo perturbation draws per severity/scenario/fold.
+  progress_grid: [0.1666667, 0.3333333, 0.5, 0.6666667, 0.8333333, 1.0]
+  update_start: 10.0  # First native online prediction update in minutes after detected episode start.
+  update_interval: 10.0  # Native prediction update interval in minutes after update_start.
+  progress_reference: relative_time  # Report trajectories on relative-time progress; use event_count for event-evidence progress.
+  include_zero_update: false  # No prediction at t=0; online updates start at update_start.
+  initial_active_policy: act  # Initial active alarms in series-to-event conversion are represented by ACT at the local episode start.
+  allow_leading_rtn: true  # Trace repair permits RTN without prior observed ACT after delayed truncation.
+
+perturbations:
+  - name: missing_events  # Randomly removes individual alarm events.
+    type: missing_events
+
+  - name: spurious_events  # Inserts random extra ACT/RTN events uniformly over the episode horizon.
+    type: spurious_events
+
+  - name: timing_uncertainty  # Randomly shifts timestamps of selected events and re-sorts them.
+    type: timing_uncertainty
+    max_shift: 10.0  # Maximum shift at severity 1.0; actual shift range is [-s*max_shift, +s*max_shift].
+
+  - name: late_time_delay  # Removes a severity-dependent fraction of initial events.
+    type: late_time_delay
+
+  - name: mixed_missing_spurious  # Compound degradation: first missing events, then spurious events.
+    type: mixed
+    stages:
+      - type: missing_events
+      - type: spurious_events
+
+  - name: mixed_spurious_timing_late  # Compound degradation: extra events, timestamp shifts, then delayed episode start.
+    type: mixed
+    stages:
+      - type: spurious_events
+      - type: timing_uncertainty
+        max_shift: 10.0
+      - type: late_time_delay
+
+models:
+  - name: wdi_1nn  # Set-based weighted dissimilarity nearest-neighbor classifier.
+    params_grid:
+      - {template_threshold: 0.5}  # Standard full-episode template training.
+
+  - name: jac_1nn  # Set-based Jaccard nearest-neighbor baseline.
+    params_grid:
+      - {}  # No tunable hyperparameters.
+
+  - name: eac_1nn  # Sequence-based exponentially attenuated components nearest-neighbor classifier.
+    params_grid:
+      - {attenuation: 0.01, time_scale: event_index, distance: euclidean}  # Balanced early/late alarm weighting across datasets.
+
+  - name: mbw_lr  # Sequence-derived modified bag-of-words features with logistic regression.
+    params_grid:
+      - {C: 1.0, penalty: l2, solver: lbfgs, fit_intercept: true}  # Standard regularization.
+
+  - name: acm_svm  # Series-based alarm coactivation matrix features with SVM classifier.
+    params_grid:
+      - {C: 1.0, kernel: rbf, gamma: scale}  # Standard RBF-SVM setting.
+
+  - name: casim  # Series-based convolutional-kernel alarm subsequence identification method.
+    params_grid:
+      - {
+          num_features: 672,
+          n_estimators: 1,
+          backend: auto,
+          random_state: 42,
+          training_mode: prefix,
+          prefix_grid: [0.1666667, 0.3333333, 0.5, 0.6666667, 0.8333333, 1.0],
+          prefix_reference: relative_time,
+          prefix_train_reference: relative_time,
+          prefix_selection: left,
+          prefix_train_horizon: prefix,
+          prefix_min_time_steps: 9
+        }  # Time-horizon-specific CASIM models trained at 10,20,...,60 min; min length 9 is required by the backend.

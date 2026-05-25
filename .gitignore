@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments
+.venv/
+.env
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# Data and generated results
+# /data/**
+# !/data/
+# !/data/README.md
+# !/data/tep/
+# !/data/tep/.gitkeep
+# !/data/fcc/
+# !/data/fcc/.gitkeep
+# /results/**
+# !/results/
+# !/results/.gitkeep
+# /figures/**
+# !/figures/
+# !/figures/.gitkeep
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+/OLD
