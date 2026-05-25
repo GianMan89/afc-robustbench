@@ -63,13 +63,12 @@ The package currently contains full in-repository implementations of the classic
 ```text
 .
 ├── configs/                    # YAML experiment configurations
-├── data/                       # Local data directory; raw datasets are not tracked
+├── data/                       # Local data directory
 │   ├── tep/
 │   └── fcc/
 ├── docs/                       # Notes on methodology and manuscript alignment
 ├── notebooks/                  # Reproducible notebook entry points
-├── results/                    # Generated benchmark outputs; usually ignored by git
-├── scripts/                    # Utility scripts for data checks, smoke tests, and plotting
+├── results/                    # Generated benchmark outputs
 ├── src/afc_robustness/         # Installable Python package
 │   ├── data.py                 # Dataset loading and padding
 │   ├── domain.py               # AlarmEvent and AlarmEpisode domain objects
@@ -149,24 +148,6 @@ The loader returns arrays with shape
 ```
 
 and zero-pads shorter runs at the end.
-
----
-
-## Quick smoke test
-
-A small synthetic dataset can be used to verify installation and core semantics:
-
-```bash
-python scripts/create_synthetic_dataset.py \
-  --output data/smoke \
-  --n-classes 3 \
-  --n-runs-per-class 12
-
-afc-benchmark run --config configs/smoke.yaml
-afc-benchmark plot --results-dir results/smoke
-```
-
-The smoke test is intended for checking the workflow, not for reproducing manuscript results.
 
 ---
 
