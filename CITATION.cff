@@ -1,6 +1,6 @@
 cff-version: 1.2.0
-title: "Perturbation-Based Robustness Benchmarking for Online Alarm Flood Classification"
-message: "If you use this repository, cite the accompanying journal manuscript."
+title: "AFC-RobustBench: Perturbation-Based Robustness Benchmarking of Online Alarm Flood Classification under Alarm-Log Degradations and Detection Delays"
+message: "If you use this repository, cite the accompanying journal paper."
 type: software
 authors:
   - family-names: Manca
@@ -20,4 +20,4 @@ authors:
   - family-names: Chen
     given-names: Tongwen
 version: 0.1.0
-date-released: 2026-05-04
+date-released: 2026-05-25

@@ -1,71 +1,125 @@
-# Perturbation-Based Robustness Benchmarking for Online Alarm Flood Classification
+# AFC-RobustBench
 
-This repository contains a structured, object-oriented Python implementation of the evaluation protocol for the manuscript
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Research artifact](https://img.shields.io/badge/research-artifact-4b8bbe.svg)](#citation)
 
-> **Perturbation-Based Robustness Benchmarking for Online Alarm Flood Classification under Alarm-Log Degradations and Detection Delays**
+**AFC-RobustBench** is a reproducible research artifact for perturbation-based statistical robustness benchmarking of online alarm flood classification (AFC) methods. The benchmark evaluates how prefix-based AFC methods behave when the observed alarm-event stream is degraded by missing events, spurious events, timing uncertainty, mixed perturbations, or delayed alarm-flood detection.
 
-The code is organized so that Jupyter notebooks remain thin, reproducible experiment entry points. All reusable logic is implemented in the `afc_robustness` package under `src/`.
+This repository accompanies the manuscript:
 
-## What is implemented
+> **AFC-RobustBench: Perturbation-Based Robustness Benchmarking of Online Alarm Flood Classification under Alarm-Log Degradations and Detection Delays**
 
-The repository implements the manuscript's prefix-based online AFC robustness benchmark:
+The artifact is designed to support transparent reproduction of the paper experiments, extension to additional AFC methods, and reuse of the perturbation suite for robustness testing of alarm-event-stream classifiers.
 
-- Loading binary alarm-series CSV files and converting them to alarm-event episodes with `ACT` and `RTN` transitions.
-- Event-stream perturbation functions for missing events, tag dropout, spurious events, burst spurious events, timing uncertainty, event-count-based delayed detection, duration-based delayed detection, and ordered mixed perturbations.
-- Trace repair that enforces tag-wise alternation while allowing a leading `RTN` event.
-- Online evaluation on a time-driven update schedule with causal mapping to a common progress grid.
-- Robustness aggregation into degradation profiles, progress-area summaries, scenario-level robustness scores, and overall average/product/minimum scores.
-- Six AFC model families aligned with the manuscript: `WDI-1NN`, `JAC-1NN`, `EAC-1NN`, `MBW-LR`, `ACM-SVM`, and `CASIM`.
-- Cross-validation with clean validation-based hyperparameter selection and test-time perturbation evaluation.
-- CSV outputs and plotting utilities for degradation curves and scalar robustness summaries.
+---
+
+## Overview
+
+Online AFC assigns an unfolding alarm-flood episode to a predefined alarm-flood class while only a prefix of the episode is observable. In deployment, the available prefix can differ from curated historical alarm logs because alarm notifications can be missing, duplicated or spurious, timestamped inconsistently, or truncated by delayed alarm-flood detection.
+
+AFC-RobustBench implements the following workflow:
+
+1. Load labeled alarm-flood episodes and convert alarm-state trajectories into alarm-event streams.
+2. Apply controlled perturbation functions over a severity grid and repeated Monte-Carlo draws.
+3. Repair perturbed traces to valid alarm-event sequences.
+4. Evaluate trained AFC methods online on a common reporting grid.
+5. Aggregate prediction trajectories into degradation profiles, scalar robustness scores, and uncertainty estimates.
+
+The benchmark is method-agnostic: any classifier that can consume a prefix representation and return a class prediction can be evaluated under the same perturbation protocol.
+
+---
+
+## Implemented benchmark components
+
+The core package implements the main components of the robustness protocol:
+
+- alarm-event and alarm-episode domain objects;
+- conversion between alarm series, alarm activation sequences, and alarm sets;
+- perturbation functions for missing events, spurious events, timing uncertainty, pipeline-induced episode-start delay, and ordered mixed perturbations;
+- trace repair enforcing valid tag-wise `ACT`/`RTN` alternation;
+- prefix-based online evaluation on event-count-driven or time-driven update schedules;
+- aggregation into degradation profiles, progress-averaged performance, scenario-level robustness scores, and overall robustness summaries;
+- plotting utilities for degradation profiles, robustness heatmaps, scalar robustness tables, and Pareto comparisons.
+
+The paper benchmark evaluates seven AFC methods:
+
+| Abbreviation | Representation | Method family |
+|---|---:|---|
+| `WDI-1NN` | alarm set | weighted dissimilarity 1-nearest neighbor |
+| `JAC-1NN` | alarm set | Jaccard distance 1-nearest neighbor |
+| `EAC-1NN` | alarm sequence | exponentially attenuated components 1-nearest neighbor |
+| `MBW-LR` | alarm sequence | modified bag-of-words with logistic regression |
+| `Hybrid AE+Trans.` | alarm sequence | hybrid autoencoder--Transformer with time-encoded histograms |
+| `ACM-SVM` | alarm series | alarm coactivation matrix with support vector machine |
+| `CASIM` | alarm series | convolutional-kernel features with ridge classifier ensemble |
+
+The package currently contains full in-repository implementations of the classical and baseline AFC methods. If the full raw outputs of an externally implemented method are not distributed, publication figures can be regenerated by merging the provided summary JSON with the benchmark outputs of the remaining methods.
+
+---
 
 ## Repository layout
 
 ```text
 .
-├── configs/                 # YAML experiment configurations
-├── data/                    # Empty data folders; place TEP/FCC data here manually
+├── configs/                    # YAML experiment configurations
+├── data/                       # Local data directory; raw datasets are not tracked
 │   ├── tep/
 │   └── fcc/
-├── docs/                    # Notes on manuscript/code alignment
-├── notebooks/               # Thin notebook entry points
-├── scripts/                 # Utility scripts, e.g. synthetic-data generation
-├── src/afc_robustness/      # Installable Python package
-│   ├── data.py              # Dataset loading and padding
-│   ├── domain.py            # AlarmEvent and AlarmEpisode domain objects
-│   ├── perturbations.py     # Perturbation suite and mixed compositions
-│   ├── repair.py            # Trace repair
-│   ├── representations.py   # Series/event/set/sequence conversion
-│   ├── online.py            # Prefix-based online evaluation
-│   ├── metrics.py           # Robustness aggregation
-│   ├── experiment.py        # Cross-validation benchmark runner
-│   ├── plotting.py          # Result visualizations
-│   └── models/              # AFC method implementations
-└── tests/                   # Unit tests for core semantics
+├── docs/                       # Notes on methodology and manuscript alignment
+├── notebooks/                  # Reproducible notebook entry points
+├── results/                    # Generated benchmark outputs; usually ignored by git
+├── scripts/                    # Utility scripts for data checks, smoke tests, and plotting
+├── src/afc_robustness/         # Installable Python package
+│   ├── data.py                 # Dataset loading and padding
+│   ├── domain.py               # AlarmEvent and AlarmEpisode domain objects
+│   ├── perturbations.py        # Perturbation suite and mixed compositions
+│   ├── repair.py               # Trace repair
+│   ├── representations.py      # Alarm-series, set, and sequence representations
+│   ├── online.py               # Prefix-based online evaluation
+│   ├── metrics.py              # Robustness aggregation
+│   ├── experiment.py           # Cross-validation benchmark runner
+│   ├── plotting.py             # Result visualizations
+│   └── models/                 # AFC method implementations
+└── tests/                      # Unit tests for core semantics
 ```
+
+Generated outputs, raw data, and large intermediate files should not be committed unless they are intentionally part of a release artifact.
+
+---
 
 ## Installation
 
-Create an environment and install the package in editable mode:
+Create a fresh Python environment and install the package in editable mode:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
+
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-For the exact `CASIM`/MultiRocket backend, install the optional dependency set:
+The package requires Python 3.10 or newer. The optional `casim` dependency set installs the backend used for the full CASIM-style convolutional feature implementation:
 
 ```bash
 python -m pip install -e ".[dev,casim]"
 ```
 
-Without `sktime`, the `CASIM` class falls back to a deterministic `CASIM-lite` random-convolution implementation. That fallback is intended for smoke tests and repository development, not for final manuscript-grade reproduction.
+Without the optional backend, the repository can still be used for smoke tests and development, but final manuscript-grade reproduction should use the dependencies specified for the relevant experiment configuration.
 
-## Data layout
+---
 
-Keep `data/tep` and `data/fcc` empty in version control and add the datasets manually. The default loader expects one subfolder per class:
+## Data
+
+Raw datasets are not tracked in the repository. Place the data manually under `data/tep/` and `data/fcc/`.
+
+The paper uses two process-industry alarm datasets:
+
+- **Tennessee-Eastman Process alarm dataset**: `https://dx.doi.org/10.21227/326k-qr90`
+- **Fluidized Catalytic Cracking alarm dataset**: `https://doi.org/10.60517/2v23vv393`
+
+The default loader expects one subfolder per class:
 
 ```text
 data/tep/
@@ -77,7 +131,9 @@ data/tep/
 └── ...
 ```
 
-Each CSV should be a binary alarm activity matrix with one row per time step and one column per alarm tag. A time column such as `Minutes`, `time`, `timestamp`, or `t` is detected and removed automatically. For example:
+Each CSV file should contain a binary alarm activity matrix with one row per time step and one column per alarm tag. A time column such as `Minutes`, `time`, `timestamp`, or `t` is detected and removed automatically.
+
+Example:
 
 ```text
 Minutes,XMEAS1_HI,XMEAS1_LO,XMEAS2_HI,...
@@ -86,50 +142,164 @@ Minutes,XMEAS1_HI,XMEAS1_LO,XMEAS2_HI,...
 3,0,1,0,...
 ```
 
-The loader returns arrays with shape `(n_episodes, n_alarm_tags, n_time_steps)` and zero-pads shorter runs at the end.
+The loader returns arrays with shape
 
-## Running a smoke test
-
-Generate a tiny synthetic dataset, then run the benchmark on the smoke configuration:
-
-```bash
-python scripts/create_synthetic_dataset.py --output data/smoke --n-classes 3 --n-runs-per-class 12
-python -m afc_robustness.cli run --config configs/smoke.yaml
-python -m afc_robustness.cli plot --results-dir results/smoke
+```text
+(n_episodes, n_alarm_tags, n_time_steps)
 ```
 
-## Running the paper-style benchmark
+and zero-pads shorter runs at the end.
 
-After placing TEP/FCC data in `data/tep` and `data/fcc`, adapt `configs/tep.yaml` or `configs/fcc.yaml`, then run:
+---
+
+## Quick smoke test
+
+A small synthetic dataset can be used to verify installation and core semantics:
 
 ```bash
-python -m afc_robustness.cli run --config configs/tep.yaml
-python -m afc_robustness.cli run --config configs/fcc.yaml
+python scripts/create_synthetic_dataset.py \
+  --output data/smoke \
+  --n-classes 3 \
+  --n-runs-per-class 12
+
+afc-benchmark run --config configs/smoke.yaml
+afc-benchmark plot --results-dir results/smoke
 ```
 
-Primary outputs are written to the configured result directory:
+The smoke test is intended for checking the workflow, not for reproducing manuscript results.
+
+---
+
+## Reproducing the paper-style experiments
+
+After placing the TEP and FCC data in the expected directories, run the configured benchmarks:
+
+```bash
+afc-benchmark run --config configs/tep.yaml
+afc-benchmark run --config configs/fcc.yaml
+```
+
+Then generate the publication figures:
+
+```bash
+afc-benchmark plot --results-dir results/tep
+afc-benchmark plot --results-dir results/fcc
+```
+
+Some publication figures can also be generated from notebooks in `notebooks/`, which keep plotting and table-generation steps explicit.
+
+---
+
+## Main output files
+
+Each experiment writes CSV files to the configured result directory:
 
 ```text
 results/<experiment>/
-├── raw_predictions.csv              # one row per fold/draw/episode/progress point
-├── degradation_profiles.csv          # M_{m,p}(s,rho)
-├── progress_auc.csv                  # A_{m,p}(s)
-├── scenario_scores.csv               # R_{m,p}
-├── overall_scores_by_fold.csv         # R_avg, R_prod, R_min per fold
-├── overall_scores_summary.csv         # mean/std over repeated folds
+├── raw_predictions.csv              # prediction per fold/draw/episode/progress point
+├── degradation_profiles.csv          # Mbar_{m,p}(s, pi)
+├── progress_auc.csv                  # Abar_{m,p}(s)
+├── scenario_scores.csv               # Rbar_{m,p}
+├── overall_scores_by_fold.csv         # R_avg, R_min per fold/draw unit
+├── overall_scores_summary.csv         # mean/std summaries
 └── selected_hyperparameters.csv       # clean validation-selected parameters
 ```
 
-## Notebook workflow
+The main reporting quantities are:
 
-The notebooks deliberately contain little logic:
+- `degradation_profiles.csv`: online accuracy over perturbation severity and observation progress;
+- `progress_auc.csv`: online accuracy averaged over the reporting grid;
+- `scenario_scores.csv`: normalized severity-integrated robustness scores for each method and scenario;
+- `overall_scores_summary.csv`: average and worst-scenario robustness summaries over the selected perturbation scenarios.
 
-1. `notebooks/01_data_check.ipynb` checks dataset loading and event conversion.
-2. `notebooks/02_run_benchmark.ipynb` runs a configured benchmark.
-3. `notebooks/03_analyze_results.ipynb` reads saved outputs and creates figures.
+---
 
-## Methodological notes
+## Perturbation scenarios
 
-The implementation separates within-episode alarm-log degradations from pipeline-induced episode-start delays. Within-episode perturbations preserve the episode horizon; delayed-detection perturbations shift the episode start and shorten the available horizon. Mixed perturbations are ordered compositions with trace repair between stages, so later stages act on the stream produced by earlier stages.
+The paper benchmark uses four base perturbation families:
 
-See `docs/MANUSCRIPT_ALIGNMENT.md` for a short list of consistency checks to address before submission.
+| Scenario | Interpretation |
+|---|---|
+| missing events | loss of alarm notifications within an extracted episode |
+| spurious events | additional alarm notifications inserted into the event stream |
+| timing uncertainty | timestamp shifts that can alter recovered event ordering |
+| episode-start delay | delayed flood detection or conservative segmentation that truncates early context |
+
+Mixed perturbations are evaluated as ordered compositions. Trace repair is applied between stages, so later perturbation stages act on the repaired output of earlier stages.
+
+---
+
+## Reproducibility notes
+
+The benchmark uses fixed train-test splits, severity grids, Monte-Carlo perturbation draws, update times, and reporting grids in the paper configurations. For manuscript-grade reproduction, use the configuration files in `configs/` and keep the following items unchanged:
+
+- cross-validation split strategy;
+- perturbation scenario list and severity grid;
+- number of Monte-Carlo draws;
+- native online update schedule;
+- reporting grid;
+- method hyperparameters.
+
+For development or ablation studies, modify the YAML configuration files rather than changing the package internals.
+
+---
+
+## Testing
+
+Run the unit tests with:
+
+```bash
+pytest
+```
+
+The tests focus on core semantic behavior such as event conversion, perturbation validity, trace repair, and aggregation consistency.
+
+---
+
+## Citation
+
+After using this repository, please cite the corresponding paper. The final bibliographic entry and DOI will be added after publication.
+
+```bibtex
+@article{Manca2026_AFCRobustBench,
+  author  = {Manca, Gianluca and Najafi, Amirhossein and Tamascelli, Nicola and Kunze, Franz C. and Dix, Marcel and Hollender, Martin and Fay, Alexander and Chen, Tongwen},
+  title   = {{AFC-RobustBench}: Perturbation-Based Robustness Benchmarking of Online Alarm Flood Classification under Alarm-Log Degradations and Detection Delays},
+  journal = {TBD},
+  year    = {2026},
+  note    = {Manuscript under review}
+}
+```
+
+Please also cite the datasets when using them:
+
+```bibtex
+@misc{Manca2020_TEPAlarmDataset,
+  author       = {Manca, Gianluca},
+  title        = {{Tennessee-Eastman-Process} Alarm Management Dataset},
+  howpublished = {IEEE Dataport},
+  year         = {2020},
+  doi          = {10.21227/326k-qr90}
+}
+```
+
+```bibtex
+@misc{Kunze2025_FCCAlarmDataset,
+  author       = {Kunze, Franz C. and Manca, Gianluca and Fay, Alexander},
+  title        = {{FCC} Alarm Dataset for Alarm Flood Classification},
+  howpublished = {ReSeeD},
+  year         = {2025},
+  doi          = {10.60517/2v23vv393}
+}
+```
+
+---
+
+## License
+
+This repository is released under the MIT License. See [`LICENSE`](LICENSE).
+
+---
+
+## Contact
+
+For questions about the benchmark, the paper experiments, or reproducibility, open an issue in this repository or contact the corresponding author listed in the manuscript.
